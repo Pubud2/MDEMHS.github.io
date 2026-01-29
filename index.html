@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Security Dashboard - CSV Analysis</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0c2461 0%, #1e3799 100%);
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%230c2461"/><path d="M0,0 L100,100" stroke="%231e3799" stroke-width="0.5"/><path d="M0,100 L100,0" stroke="%231e3799" stroke-width="0.5"/></svg>');
+            opacity: 0.1;
+            z-index: -1;
+        }
+        
+        .dashboard-container {
+            max-width: 1800px;
+            margin: 0 auto;
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .header {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 35px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #00b4db, #0083b0);
+        }
+        
+        .header h1 {
+            font-size: 36px;
+            margin-bottom: 15px;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            background: linear-gradient(45deg, #00b4db, #0083b0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 17px;
+            max-width: 800px;
+            line-height: 1.8;
+        }
+        
+        .header-icons {
+            position: absolute;
+            right: 30px;
+            top: 30px;
+            font-size: 24px;
+            opacity: 0.3;
+        }
+        
+        .upload-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            text-align: center;
+            border: 2px dashed rgba(0, 180, 219, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .upload-section:hover {
+            border-color: #00b4db;
+            box-shadow: 0 20px 40px rgba(0, 180, 219, 0.2);
+            transform: translateY(-5px);
+        }
+        
+        .upload-section h2 {
+            color: #0c2461;
+            margin-bottom: 25px;
+            font-size: 28px;
+            font-weight: 600;
+            position: relative;
+            display: inline-block;
+        }
+        
+        .upload-section h2::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background: linear-gradient(90deg, #00b4db, #0083b0);
+            border-radius: 2px;
+        }
+        
+        .file-input-container {
+            margin: 30px 0;
+            position: relative;
+        }
+        
+        .file-input-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%);
+            color: white;
+            padding: 16px 32px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 8px 20px rgba(0, 180, 219, 0.3);
+            border: none;
+            outline: none;
+        }
+        
+        .file-input-label:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(0, 180, 219, 0.4);
+            background: linear-gradient(135deg, #0083b0 0%, #006994 100%);
+        }
+        
+        .file-input-label:active {
+            transform: translateY(-1px);
+        }
+        
+        #csvFile {
+            display: none;
+        }
+        
+        .file-name {
+            margin-top: 15px;
+            color: #666;
+            font-size: 15px;
+            background: rgba(0, 180, 219, 0.1);
+            padding: 12px 20px;
+            border-radius: 8px;
+            display: inline-block;
+            border: 1px dashed #00b4db;
+        }
+        
+        .upload-btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+            color: white;
+            border: none;
+            padding: 16px 40px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 17px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            box-shadow: 0 8px 20px rgba(76, 175, 80, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .upload-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(76, 175, 80, 0.4);
+            background: linear-gradient(135deg, #43A047 0%, #1B5E20 100%);
+        }
+        
+        .upload-btn:disabled {
+            background: linear-gradient(135deg, #cccccc 0%, #999999 100%);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .loading {
+            display: none;
+            margin-top: 30px;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid #00b4db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+            box-shadow: 0 0 20px rgba(0, 180, 219, 0.3);
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 35px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(255,255,255,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #00b4db, #0083b0);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+        }
+        
+        .stat-card h3 {
+            color: #0c2461;
+            font-size: 16px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            opacity: 0.8;
+        }
+        
+        .stat-value {
+            font-size: 42px;
+            font-weight: 800;
+            color: #0c2461;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #0c2461, #1e3799);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-detail {
+            font-size: 15px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .dashboard-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 35px;
+            margin-bottom: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            border: 1px solid rgba(255,255,255,0.2);
+            animation: slideUp 0.6s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .section-title {
+            color: #0c2461;
+            font-size: 24px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid rgba(0, 180, 219, 0.2);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .section-title::before {
+            content: '';
+            width: 40px;
+            height: 4px;
+            background: linear-gradient(90deg, #00b4db, #0083b0);
+            border-radius: 2px;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 15px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .data-table th {
+            background: linear-gradient(135deg, #0c2461 0%, #1e3799 100%);
+            color: white;
+            text-align: left;
+            padding: 18px 20px;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .data-table td {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            background: white;
+        }
+        
+        .data-table tr:hover td {
+            background: linear-gradient(90deg, rgba(0, 180, 219, 0.1), rgba(0, 131, 176, 0.05));
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 15px;
+            border-radius: 25px;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            min-width: 80px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .status-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        
+        .status-active { 
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+            color: white; 
+        }
+        .status-passive { 
+            background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+            color: white; 
+        }
+        .status-other { 
+            background: linear-gradient(135deg, #9E9E9E 0%, #757575 100%);
+            color: white; 
+        }
+        .status-edrblocked { 
+            background: linear-gradient(135deg, #F44336 0%, #C62828 100%);
+            color: white; 
+        }
+        .status-completed { 
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+            color: white; 
+        }
+        .status-cancelled { 
+            background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+            color: white; 
+        }
+        .status-na { 
+            background: linear-gradient(135deg, #BDBDBD 0%, #9E9E9E 100%);
+            color: white; 
+        }
+        .status-yes { 
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+            color: white; 
+        }
+        .status-no { 
+            background: linear-gradient(135deg, #F44336 0%, #C62828 100%);
+            color: white; 
+        }
+        
+        .progress-bar {
+            height: 12px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 15px 0;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00b4db, #0083b0);
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, 
+                rgba(255,255,255,0) 0%, 
+                rgba(255,255,255,0.3) 50%, 
+                rgba(255,255,255,0) 100%);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .grid-3col {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .grid-4col {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+        }
+        
+        .distribution-chart {
+            margin-top: 20px;
+        }
+        
+        .distribution-item {
+            margin-bottom: 15px;
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        .distribution-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .distribution-label {
+            font-size: 15px;
+            font-weight: 500;
+        }
+        
+        .distribution-count {
+            font-size: 15px;
+            font-weight: 700;
+            color: #0c2461;
+            background: rgba(0, 180, 219, 0.1);
+            padding: 5px 15px;
+            border-radius: 15px;
+        }
+        
+        .version-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 2px solid rgba(0, 180, 219, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            background: white;
+        }
+        
+        .version-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .version-list::-webkit-scrollbar-track {
+            background: rgba(0, 180, 219, 0.1);
+            border-radius: 4px;
+        }
+        
+        .version-list::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #00b4db, #0083b0);
+            border-radius: 4px;
+        }
+        
+        .version-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(0, 180, 219, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .version-item:hover {
+            background: rgba(0, 180, 219, 0.05);
+            padding-left: 10px;
+            padding-right: 10px;
+            margin: 0 -10px;
+            border-radius: 8px;
+        }
+        
+        .version-item:last-child {
+            border-bottom: none;
+        }
+        
+        .version-name {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            font-weight: 600;
+            color: #0c2461;
+        }
+        
+        .version-count {
+            background: linear-gradient(135deg, #00b4db, #0083b0);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            min-width: 70px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 180, 219, 0.3);
+        }
+        
+        .alert {
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            animation: slideIn 0.5s ease-out;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .alert-success {
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+            color: white;
+            border: none;
+        }
+        
+        .alert-error {
+            background: linear-gradient(135deg, #F44336 0%, #C62828 100%);
+            color: white;
+            border: none;
+        }
+        
+        .filter-controls {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .filter-select {
+            padding: 12px 25px;
+            border: 2px solid rgba(0, 180, 219, 0.3);
+            border-radius: 10px;
+            background: white;
+            color: #333;
+            min-width: 250px;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .filter-select:focus {
+            outline: none;
+            border-color: #00b4db;
+            box-shadow: 0 5px 20px rgba(0, 180, 219, 0.2);
+        }
+        
+        .export-btn {
+            background: linear-gradient(135deg, #2196F3 0%, #0D47A1 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 8px 20px rgba(33, 150, 243, 0.3);
+            margin-left: auto;
+        }
+        
+        .export-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(33, 150, 243, 0.4);
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 60px 40px;
+            color: #666;
+            font-style: italic;
+            font-size: 18px;
+            background: white;
+            border-radius: 12px;
+            border: 2px dashed rgba(0, 180, 219, 0.3);
+        }
+        
+        .category-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, rgba(0, 180, 219, 0.1), rgba(0, 131, 176, 0.1));
+            color: #0c2461;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 13px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            font-weight: 600;
+            border: 1px solid rgba(0, 180, 219, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .category-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 180, 219, 0.2);
+        }
+        
+        .tab-container {
+            display: flex;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .tab {
+            padding: 15px 30px;
+            cursor: pointer;
+            font-weight: 600;
+            color: rgba(255,255,255,0.8);
+            border-radius: 10px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .tab::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(0, 180, 219, 0.1), rgba(0, 131, 176, 0.1));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .tab:hover {
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .tab:hover::before {
+            opacity: 1;
+        }
+        
+        .tab.active {
+            background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%);
+            color: white;
+            box-shadow: 0 8px 25px rgba(0, 180, 219, 0.4);
+        }
+        
+        .tab-content {
+            display: none;
+            animation: fadeInUp 0.5s ease-out;
+        }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .column-type-indicator {
+            font-size: 13px;
+            color: #666;
+            margin-left: 10px;
+            font-weight: normal;
+            opacity: 0.8;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+        }
+        
+        .empty-value {
+            color: #999;
+            font-style: italic;
+        }
+        
+        .developer-credit {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 1000;
+            animation: float 3s ease-in-out infinite;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .developer-credit span {
+            background: linear-gradient(45deg, #00b4db, #0083b0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        
+        .developer-credit::before {
+            content: '👨‍💻';
+            font-size: 18px;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.7);
+            font-size: 15px;
+            line-height: 1.8;
+            backdrop-filter: blur(10px);
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .footer strong {
+            color: white;
+            font-weight: 600;
+        }
+        
+        .footer p {
+            margin-bottom: 10px;
+        }
+        
+        .glowing-text {
+            color: #00b4db;
+            text-shadow: 0 0 10px rgba(0, 180, 219, 0.5);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 0 0 10px rgba(0, 180, 219, 0.5); }
+            to { text-shadow: 0 0 20px rgba(0, 180, 219, 0.8), 0 0 30px rgba(0, 180, 219, 0.6); }
+        }
+        
+        @media (max-width: 1200px) {
+            .grid-4col {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .grid-2col, .grid-3col, .grid-4col {
+                grid-template-columns: 1fr;
+            }
+            
+            .summary-stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .filter-controls {
+                flex-direction: column;
+            }
+            
+            .filter-select {
+                min-width: 100%;
+            }
+            
+            .export-btn {
+                margin-left: 0;
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .header {
+                padding: 25px;
+            }
+            
+            .header h1 {
+                font-size: 28px;
+            }
+            
+            .upload-section {
+                padding: 25px;
+            }
+            
+            .developer-credit {
+                position: static;
+                margin-top: 30px;
+                width: 100%;
+                border-radius: 15px;
+                text-align: center;
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            
+            .dashboard-container {
+                padding: 0 5px;
+            }
+            
+            .tab {
+                padding: 10px 15px;
+                font-size: 14px;
+            }
+            
+            .stat-value {
+                font-size: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <div class="header-icons">🛡️📊🔒</div>
+            <h1>Dynamic Security Dashboard - CSV Analysis</h1>
+            <p>Upload your <strong class="glowing-text">monthly security health check</strong> CSV export file to generate a comprehensive dynamic dashboard with advanced analytics</p>
+            <p>Automatically analyzes all columns and creates appropriate visualizations for security monitoring</p>
+        </div>
+        
+        <div class="upload-section">
+            <h2>📁 Upload Your Monthly Security CSV File</h2>
+            <div class="file-input-container">
+                <label for="csvFile" class="file-input-label">
+                    📂 Choose CSV File
+                </label>
+                <input type="file" id="csvFile" accept=".csv">
+                <div class="file-name" id="fileName">No file selected</div>
+            </div>
+            
+            <button class="upload-btn" id="uploadBtn" disabled>
+                🚀 Generate Security Dashboard
+            </button>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Analyzing Security CSV data...</p>
+            </div>
+            
+            <div id="uploadAlert" class="alert" style="display: none;"></div>
+        </div>
+        
+        <div id="dashboardContent" style="display: none;">
+            <!-- Dashboard will be generated here -->
+        </div>
+        
+        <div class="developer-credit">
+            Developed By <span>Pubudu</span>
+        </div>
+        
+        <div class="footer">
+            <p><strong>🔒 Dynamic Security Health Check Dashboard</strong> • Automatically analyzes all CSV columns from monthly security reports</p>
+            <p>All data processed client-side • No data is sent to any server - processing happens securely in your browser</p>
+            <p>Perfect for monthly security audits, compliance checks, and security posture analysis</p>
+        </div>
+    </div>
+
+    <script>
+        // ... (The JavaScript code remains exactly the same as before) ...
+        document.addEventListener('DOMContentLoaded', function() {
+            const csvFileInput = document.getElementById('csvFile');
+            const fileNameDisplay = document.getElementById('fileName');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const loading = document.getElementById('loading');
+            const uploadAlert = document.getElementById('uploadAlert');
+            const dashboardContent = document.getElementById('dashboardContent');
+            
+            let csvData = [];
+            let columnAnalysis = {};
+            
+            // Handle file selection
+            csvFileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    fileNameDisplay.textContent = file.name;
+                    uploadBtn.disabled = false;
+                } else {
+                    fileNameDisplay.textContent = 'No file selected';
+                    uploadBtn.disabled = true;
+                }
+            });
+            
+            // Handle upload button click
+            uploadBtn.addEventListener('click', function() {
+                const file = csvFileInput.files[0];
+                if (!file) {
+                    showAlert('Please select a CSV file first', 'error');
+                    return;
+                }
+                
+                loading.style.display = 'block';
+                uploadBtn.disabled = true;
+                
+                parseCSV(file);
+            });
+            
+            function showAlert(message, type) {
+                uploadAlert.textContent = message;
+                uploadAlert.className = `alert alert-${type}`;
+                uploadAlert.style.display = 'block';
+                
+                setTimeout(() => {
+                    uploadAlert.style.display = 'none';
+                }, 5000);
+            }
+            
+            function parseCSV(file) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        const text = e.target.result;
+                        const rows = text.split('\n');
+                        
+                        if (rows.length === 0) {
+                            throw new Error('CSV file is empty');
+                        }
+                        
+                        // Parse headers
+                        const headers = rows[0].split(',').map(h => h.trim());
+                        
+                        // Parse data rows
+                        csvData = [];
+                        for (let i = 1; i < rows.length; i++) {
+                            if (rows[i].trim() === '') continue;
+                            
+                            // Handle quoted fields and commas within fields
+                            const row = parseCSVRow(rows[i]);
+                            const obj = {};
+                            
+                            headers.forEach((header, index) => {
+                                obj[header] = row[index] ? row[index].trim() : '';
+                            });
+                            
+                            csvData.push(obj);
+                        }
+                        
+                        if (csvData.length === 0) {
+                            throw new Error('No data found in CSV file');
+                        }
+                        
+                        // Analyze columns
+                        columnAnalysis = analyzeColumns(csvData);
+                        
+                        showAlert(`Successfully loaded ${csvData.length} security records with ${headers.length} columns`, 'success');
+                        generateDashboard(csvData, columnAnalysis);
+                        
+                    } catch (error) {
+                        showAlert(`Error parsing CSV: ${error.message}`, 'error');
+                        console.error('CSV parsing error:', error);
+                    } finally {
+                        loading.style.display = 'none';
+                        uploadBtn.disabled = false;
+                    }
+                };
+                
+                reader.onerror = function() {
+                    showAlert('Error reading file', 'error');
+                    loading.style.display = 'none';
+                    uploadBtn.disabled = false;
+                };
+                
+                reader.readAsText(file);
+            }
+            
+            function parseCSVRow(row) {
+                const result = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let i = 0; i < row.length; i++) {
+                    const char = row[i];
+                    
+                    if (char === '"') {
+                        if (inQuotes && row[i + 1] === '"') {
+                            // Escaped quote
+                            current += '"';
+                            i++;
+                        } else {
+                            inQuotes = !inQuotes;
+                        }
+                    } else if (char === ',' && !inQuotes) {
+                        result.push(current);
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                
+                result.push(current);
+                return result;
+            }
+            
+            function analyzeColumns(data) {
+                const analysis = {};
+                const headers = Object.keys(data[0] || {});
+                
+                headers.forEach(header => {
+                    const values = data.map(row => row[header]).filter(val => val !== '');
+                    const uniqueValues = [...new Set(values)];
+                    const sampleValues = values.slice(0, 5);
+                    
+                    // Determine column type
+                    let type = 'text';
+                    let isBoolean = false;
+                    let isVersion = false;
+                    let isDate = false;
+                    let isNumeric = false;
+                    
+                    // Check for boolean values
+                    const booleanPattern = /^(Yes|No|True|False|yes|no|true|false|YES|NO|TRUE|FALSE)$/;
+                    if (values.every(v => !v || booleanPattern.test(v))) {
+                        type = 'boolean';
+                        isBoolean = true;
+                    }
+                    // Check for version numbers
+                    else if (header.toLowerCase().includes('version') || 
+                             values.some(v => v && /^\d+\.\d+\.\d+/.test(v))) {
+                        type = 'version';
+                        isVersion = true;
+                    }
+                    // Check for dates
+                    else if (header.toLowerCase().includes('date') || 
+                            header.toLowerCase().includes('time') ||
+                            values.some(v => v && /^\d{1,2}\/\d{1,2}\/\d{4}/.test(v))) {
+                        type = 'date';
+                        isDate = true;
+                    }
+                    // Check for numeric values
+                    else if (values.every(v => !v || !isNaN(v.replace(/\./g, '')))) {
+                        type = 'numeric';
+                        isNumeric = true;
+                    }
+                    
+                    // Check for status/enum fields
+                    const isStatusField = header.toLowerCase().includes('status') || 
+                                         header.toLowerCase().includes('mode') ||
+                                         uniqueValues.length <= 10;
+                    
+                    analysis[header] = {
+                        type: type,
+                        isBoolean: isBoolean,
+                        isVersion: isVersion,
+                        isDate: isDate,
+                        isNumeric: isNumeric,
+                        isStatusField: isStatusField,
+                        totalCount: values.length,
+                        uniqueCount: uniqueValues.length,
+                        emptyCount: data.length - values.length,
+                        sampleValues: sampleValues,
+                        topValues: getTopValues(values, 10)
+                    };
+                });
+                
+                return analysis;
+            }
+            
+            function getTopValues(values, limit) {
+                const counts = {};
+                values.forEach(val => {
+                    if (val) {
+                        counts[val] = (counts[val] || 0) + 1;
+                    }
+                });
+                
+                return Object.entries(counts)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, limit);
+            }
+            
+            function generateDashboard(data, analysis) {
+                const totalDevices = data.length;
+                const columns = Object.keys(analysis);
+                
+                // Categorize columns
+                const statusColumns = columns.filter(col => 
+                    analysis[col].isStatusField && analysis[col].uniqueCount <= 20
+                );
+                
+                const versionColumns = columns.filter(col => 
+                    analysis[col].isVersion || col.toLowerCase().includes('version')
+                );
+                
+                const dateColumns = columns.filter(col => 
+                    analysis[col].isDate || col.toLowerCase().includes('date') || 
+                    col.toLowerCase().includes('time')
+                );
+                
+                const booleanColumns = columns.filter(col => 
+                    analysis[col].isBoolean
+                );
+                
+                const otherColumns = columns.filter(col => 
+                    !statusColumns.includes(col) && 
+                    !versionColumns.includes(col) && 
+                    !dateColumns.includes(col) &&
+                    !booleanColumns.includes(col)
+                );
+                
+                // Calculate key metrics
+                const deviceNames = data.map(row => row['Device name'] || '').filter(name => name);
+                const uniqueOS = analysis['OS platform'] ? analysis['OS platform'].uniqueCount : 0;
+                
+                // Generate dashboard HTML
+                dashboardContent.innerHTML = `
+                    <div class="tab-container" id="dashboardTabs">
+                        <div class="tab active" onclick="switchTab('overview')">📊 Overview</div>
+                        <div class="tab" onclick="switchTab('status')">🔄 Status Fields</div>
+                        <div class="tab" onclick="switchTab('versions')">🔢 Versions</div>
+                        <div class="tab" onclick="switchTab('devices')">💻 Device Details</div>
+                    </div>
+                    
+                    <div id="tabContent">
+                        <!-- Tab content will be inserted here -->
+                    </div>
+                `;
+                
+                // Generate tab contents
+                const tabContent = document.getElementById('tabContent');
+                
+                // Overview Tab
+                const overviewContent = `
+                    <div class="tab-content active" id="overviewTab">
+                        <div class="summary-stats">
+                            <div class="stat-card">
+                                <h3>Total Devices</h3>
+                                <div class="stat-value">${totalDevices}</div>
+                                <div class="stat-detail">${deviceNames.length} with names</div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <h3>Data Columns</h3>
+                                <div class="stat-value">${columns.length}</div>
+                                <div class="stat-detail">${statusColumns.length} status fields</div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <h3>Unique OS Types</h3>
+                                <div class="stat-value">${uniqueOS}</div>
+                                <div class="stat-detail">Operating system variations</div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <h3>Data Quality</h3>
+                                <div class="stat-value">${calculateDataQuality(data)}%</div>
+                                <div class="stat-detail">Complete records</div>
+                            </div>
+                        </div>
+                        
+                        <div class="dashboard-section">
+                            <h2 class="section-title">🎯 Key Security Status Fields</h2>
+                            <div class="grid-2col">
+                                ${generateStatusFieldCharts(data, ['AV mode', 'Quick scan status', 'Full scan status'])}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Status Fields Tab
+                const statusContent = `
+                    <div class="tab-content" id="statusTab">
+                        <div class="dashboard-section">
+                            <h2 class="section-title">🔄 Security Status Field Distributions</h2>
+                            <div class="stats-grid">
+                                ${generateAllStatusCharts(data, statusColumns)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Versions Tab
+                const versionsContent = `
+                    <div class="tab-content" id="versionsTab">
+                        <div class="dashboard-section">
+                            <h2 class="section-title">🔢 Security Version Distributions</h2>
+                            <div class="grid-3col">
+                                ${generateVersionCharts(data, versionColumns)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Devices Tab
+                const devicesContent = `
+                    <div class="tab-content" id="devicesTab">
+                        <div class="dashboard-section">
+                            <h2 class="section-title">💻 Security Device Details</h2>
+                            <div class="filter-controls">
+                                <select id="filterOS" class="filter-select" onchange="filterDeviceTable()">
+                                    <option value="">All OS Platforms</option>
+                                    ${generateOSOptions(data)}
+                                </select>
+                                
+                                <select id="filterAV" class="filter-select" onchange="filterDeviceTable()">
+                                    <option value="">All AV Modes</option>
+                                    ${generateAVModeOptions(data)}
+                                </select>
+                                
+                                <button class="export-btn" onclick="exportToCSV()">
+                                    📥 Export Current View
+                                </button>
+                            </div>
+                            <div id="deviceTableContainer">
+                                ${generateDeviceTable(data)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                tabContent.innerHTML = overviewContent + statusContent + versionsContent + devicesContent;
+                
+                dashboardContent.style.display = 'block';
+                dashboardContent.scrollIntoView({ behavior: 'smooth' });
+                
+                // Store data globally for filtering
+                window.allData = data;
+                window.filteredData = [...data];
+                window.columnAnalysis = analysis;
+            }
+            
+            function calculateDataQuality(data) {
+                if (!data.length) return 0;
+                const totalFields = Object.keys(data[0]).length * data.length;
+                let filledFields = 0;
+                
+                data.forEach(row => {
+                    Object.values(row).forEach(value => {
+                        if (value && value.trim() !== '' && 
+                            value.toLowerCase() !== 'no data available' &&
+                            value.toLowerCase() !== 'doesn\'t apply') {
+                            filledFields++;
+                        }
+                    });
+                });
+                
+                return Math.round((filledFields / totalFields) * 100);
+            }
+            
+            function generateStatusFieldCharts(data, fieldNames) {
+                let html = '';
+                
+                fieldNames.forEach(fieldName => {
+                    if (!data[0] || !data[0][fieldName]) return;
+                    
+                    const counts = countValues(data, fieldName);
+                    const total = data.length;
+                    
+                    html += `
+                        <div class="dashboard-section">
+                            <h3>${fieldName}</h3>
+                            <div class="distribution-chart">
+                                ${Object.entries(counts).map(([value, count]) => {
+                                    const percentage = calculatePercentage(count, total);
+                                    const statusClass = getStatusClass(value);
+                                    return `
+                                        <div class="distribution-item">
+                                            <div class="distribution-header">
+                                                <span class="distribution-label">
+                                                    <span class="status-badge ${statusClass}">${value || 'Empty'}</span>
+                                                </span>
+                                                <span class="distribution-count">${count} (${percentage}%)</span>
+                                            </div>
+                                            <div class="progress-bar">
+                                                <div class="progress-fill" style="width: ${percentage}%"></div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                return html;
+            }
+            
+            function generateAllStatusCharts(data, statusColumns) {
+                if (statusColumns.length === 0) {
+                    return '<div class="no-data">No status fields found in data</div>';
+                }
+                
+                let html = '';
+                
+                statusColumns.forEach(column => {
+                    const counts = countValues(data, column);
+                    const total = data.length;
+                    
+                    html += `
+                        <div class="dashboard-section">
+                            <h3>${column} <span class="column-type-indicator">(${Object.keys(counts).length} unique values)</span></h3>
+                            <div class="distribution-chart">
+                                ${Object.entries(counts).slice(0, 15).map(([value, count]) => {
+                                    const percentage = calculatePercentage(count, total);
+                                    return `
+                                        <div class="distribution-item">
+                                            <div class="distribution-header">
+                                                <span class="distribution-label">${value || '<span class="empty-value">Empty</span>'}</span>
+                                                <span class="distribution-count">${count}</span>
+                                            </div>
+                                            <div class="progress-bar">
+                                                <div class="progress-fill" style="width: ${percentage}%"></div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                                ${Object.entries(counts).length > 15 ? 
+                                    `<div style="text-align: center; margin-top: 10px; color: #666; font-size: 12px;">
+                                        ... and ${Object.entries(counts).length - 15} more values
+                                    </div>` : ''
+                                }
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                return html;
+            }
+            
+            function generateVersionCharts(data, versionColumns) {
+                if (versionColumns.length === 0) {
+                    return '<div class="no-data">No version fields found in data</div>';
+                }
+                
+                let html = '';
+                
+                versionColumns.forEach(column => {
+                    const topVersions = getTopValues(data.map(row => row[column]), 10);
+                    
+                    html += `
+                        <div class="dashboard-section">
+                            <h3>${column}</h3>
+                            <div class="version-list">
+                                ${topVersions.map(([version, count]) => {
+                                    const percentage = calculatePercentage(count, data.length);
+                                    return `
+                                        <div class="version-item">
+                                            <span class="version-name">${version || '<span class="empty-value">No version</span>'}</span>
+                                            <span class="version-count">${count} (${percentage}%)</span>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                return html;
+            }
+            
+            function generateOSOptions(data) {
+                const osTypes = [...new Set(data.map(row => row['OS platform']).filter(os => os))];
+                return osTypes.map(os => `<option value="${os}">${os}</option>`).join('');
+            }
+            
+            function generateAVModeOptions(data) {
+                const avModes = [...new Set(data.map(row => row['AV mode']).filter(mode => mode))];
+                return avModes.map(mode => `<option value="${mode}">${mode}</option>`).join('');
+            }
+            
+            function generateDeviceTable(data) {
+                if (data.length === 0) {
+                    return '<div class="no-data">No devices match the selected filters</div>';
+                }
+                
+                // Get column headers (limit to important ones for display)
+                const displayColumns = Object.keys(data[0]).filter(col => 
+                    !col.toLowerCase().includes('id') && 
+                    !col.toLowerCase().includes('timestamp') &&
+                    !col.toLowerCase().includes('refresh') &&
+                    !col.toLowerCase().includes('publish')
+                ).slice(0, 8); // Limit to 8 columns for display
+                
+                let html = `
+                    <div style="overflow-x: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    ${displayColumns.map(col => `<th>${col}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                // Show only first 100 devices for performance
+                const displayData = data.slice(0, 100);
+                
+                displayData.forEach(device => {
+                    html += `
+                        <tr>
+                            ${displayColumns.map(col => {
+                                const value = device[col] || '';
+                                const displayValue = value.length > 50 ? value.substring(0, 50) + '...' : value;
+                                const cellClass = !value ? 'empty-value' : '';
+                                
+                                // Apply special formatting for certain columns
+                                if (col === 'AV mode' || col.toLowerCase().includes('status')) {
+                                    const statusClass = getStatusClass(value);
+                                    return `<td><span class="status-badge ${statusClass}">${value || 'N/A'}</span></td>`;
+                                } else if (col.toLowerCase().includes('version')) {
+                                    return `<td style="font-family: monospace; font-size: 12px;">${displayValue}</td>`;
+                                } else {
+                                    return `<td class="${cellClass}">${displayValue || 'N/A'}</td>`;
+                                }
+                            }).join('')}
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                    ${data.length > 100 ? `
+                        <div style="text-align: center; margin-top: 15px; padding: 10px; background: #f5f7ff; border-radius: 5px;">
+                            Showing 100 of ${data.length} devices. Use filters to refine results.
+                        </div>
+                    ` : ''}
+                `;
+                
+                return html;
+            }
+            
+            // Helper functions
+            function countValues(data, field) {
+                const counts = {};
+                data.forEach(item => {
+                    const value = item[field] || 'Empty';
+                    counts[value] = (counts[value] || 0) + 1;
+                });
+                return counts;
+            }
+            
+            function calculatePercentage(count, total) {
+                return total > 0 ? ((count / total) * 100).toFixed(1) : 0;
+            }
+            
+            function getStatusClass(status) {
+                if (!status || status === 'Empty') return 'status-na';
+                const lowerStatus = status.toLowerCase();
+                if (lowerStatus.includes('active')) return 'status-active';
+                if (lowerStatus.includes('passive')) return 'status-passive';
+                if (lowerStatus.includes('edr')) return 'status-edrblocked';
+                if (lowerStatus.includes('other')) return 'status-other';
+                if (lowerStatus.includes('completed')) return 'status-completed';
+                if (lowerStatus.includes('cancelled')) return 'status-cancelled';
+                if (lowerStatus.includes('yes')) return 'status-yes';
+                if (lowerStatus.includes('no')) return 'status-no';
+                return 'status-na';
+            }
+            
+            // Global functions
+            window.switchTab = function(tabName) {
+                // Update tab styles
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                event.target.classList.add('active');
+                
+                // Update tab content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(tabName + 'Tab').classList.add('active');
+            };
+            
+            window.filterDeviceTable = function() {
+                const osFilter = document.getElementById('filterOS').value;
+                const avFilter = document.getElementById('filterAV').value;
+                
+                window.filteredData = window.allData.filter(device => {
+                    const matchesOS = !osFilter || device['OS platform'] === osFilter;
+                    const matchesAV = !avFilter || device['AV mode'] === avFilter;
+                    
+                    return matchesOS && matchesAV;
+                });
+                
+                document.getElementById('deviceTableContainer').innerHTML = generateDeviceTable(window.filteredData);
+            };
+            
+            window.exportToCSV = function() {
+                if (!window.filteredData || window.filteredData.length === 0) {
+                    alert('No data to export');
+                    return;
+                }
+                
+                const headers = Object.keys(window.filteredData[0]);
+                const csvContent = [
+                    headers.join(','),
+                    ...window.filteredData.map(row => 
+                        headers.map(header => {
+                            const value = row[header] || '';
+                            // Escape quotes and wrap in quotes if contains comma
+                            const escapedValue = value.toString().replace(/"/g, '""');
+                            return value.includes(',') ? `"${escapedValue}"` : escapedValue;
+                        }).join(',')
+                    )
+                ].join('\n');
+                
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `security_data_${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            };
+        });
+    </script>
+</body>
+</html>
